@@ -13,6 +13,11 @@ const configTweet = joi.object({
   tweet: joi.string().required()
 })
 
+const configDeleteTweet = joi.object({
+  _id: joi.string().required(),
+  username: joi.string().required(),
+})
+
 dotenv.config()
 const port = process.env.PORT || 5500
 const mongoClient = new MongoClient(process.env.DATABASE_URL)
@@ -34,7 +39,7 @@ app.use(express.json())
 app.get("/tweets", async (req, res) => {
 
   try {
-    const data = await db.collection('users').find().toArray()
+    const data = await db.collection('tweets').find().toArray()
     res.send(data)
   }
   catch (error) {
@@ -85,7 +90,63 @@ app.post('/tweets', async (req, res) => {
   }
 }
 )
+const configEditTweet = joi.object({
 
+  username: joi.string().required(),
+  tweet: joi.string().required()
+})
+app.put('/tweets/:id', async (req, res) => {
+  const id = req.params.id
+  const ajuste = req.body
+  const validaTweet = configEditTweet.validate(ajuste, { abortEarly: false })
+  if (validaTweet.error) {
+    const erros = validaTweet.error.details.map((detail) => detail.message)
+    return res.status(422).send(erros)
+  }
+  let encontraId = await db.collection('tweets').findOne({ _id: new ObjectId(id) })
+  if (encontraId) {
+    try {
+      db.collection('tweets').updateOne({
+        _id: new ObjectId(id)
+      }, {
+        $set: {
+          tweet: ajuste.tweet
+        }
+      })
+      res.status(204)
+    }
+    catch {
+      return res.status(400).send('Erro ao editar o tweet')
+    }
+  }
+  else {
+    return res.status(404).send('O tweet a ser editado não existe!')
+  }
+
+})
+app.delete('/tweets/:id', async (req, res) => {
+  const id = req.params.id
+  const body = req.body
+  const validaDelete = configDeleteTweet.validate(body, { abortEarly: false })
+  if (validaDelete.error) {
+    const erros = validaDelete.error.details.map((detail) => detail.message)
+    return res.status(422).send(erros)
+  }
+  const item = await db.collection('tweets').findOne({ _id: new ObjectId(id) })
+
+  if (item) {
+    try {
+      await db.collection('tweets').deleteOne({ _id: new ObjectId(id) })
+      res.status(204).send('Sucesso ao excluir o tweet')
+    }
+    catch {
+      res.status(400).send('Erro ao excluir o Tweet')
+    }
+  } else {
+    res.status(404).send('Tweet não existe.')
+  }
+}
+)
 
 
 app.listen(port, () => { console.log("Servidor rodando na porta: ", port) })

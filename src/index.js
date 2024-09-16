@@ -139,7 +139,7 @@ app.delete('/tweets/:id', async (req, res) => {
     }
 
     await db.collection("tweets").deleteOne({ _id: new ObjectId(id) });
-    res.status(204).send(); // No Content
+    res.status(204).send();
   } catch (err) {
     res.status(500).send("Erro ao deletar o tweet");
   }
